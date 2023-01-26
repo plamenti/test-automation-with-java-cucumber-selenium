@@ -1,0 +1,71 @@
+import net.masterthought.cucumber.Configuration
+import net.masterthought.cucumber.ReportBuilder
+
+buildscript {
+    repositories {
+        maven {
+            url = 'https://repo.maven.apache.org/maven2'
+        }
+    }
+
+    dependencies {
+        classpath "net.masterthought:cucumber-reporting:5.6.1"
+    }
+}
+
+plugins {
+    id 'java'
+}
+
+group 'pam.test.auotmation'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.seleniumhq.selenium:selenium-java:4.7.2'
+    implementation 'io.cucumber:cucumber-java:7.11.0'
+    implementation 'io.cucumber:cucumber-testng:7.11.0'
+    implementation 'io.github.bonigarcia:webdrivermanager:5.3.1'
+    implementation 'org.slf4j:slf4j-simple:2.0.3'
+}
+
+test {
+    useTestNG()
+    scanForTestClasses(false)
+    testLogging.showStandardStreams(true)
+    systemProperties(System.properties)
+}
+
+tasks.register('generateReport')
+
+tasks.named('generateReport') {
+    group 'Utilities'
+    description 'Generates summarized cucumber html report based on teh data in cucumber-report.json'
+
+    doLast {
+        generateReport()
+    }
+}
+
+def generateReport() {
+    File reportOutputDirectory = new File(System.getProperty("user.dir"), "/build/test-report")
+    reportOutputDirectory.deleteDir()
+
+    def jsonReports = fileTree(dir: "build/cucumber").include '**/*.json'.toString()
+    List<String> jsonReportFiles = new ArrayList<String>()
+    jsonReports.each { File file ->
+        jsonReportFiles.add("build/cucumber/${file.name}".toString())
+    }
+
+    String projectName = project.name
+    Configuration configuration = new Configuration(reportOutputDirectory, projectName)
+
+    ReportBuilder reportBuilder = new ReportBuilder(jsonReportFiles, configuration)
+    reportBuilder.generateReports()
+
+    String pathToReport = "file:///" + reportOutputDirectory.getCanonicalPath() + "/cucumber-html-reports/overview-features.html"
+    println("\nReport: " + pathToReport.replace("\\", "/"))
+}
